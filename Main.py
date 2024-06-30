@@ -1,8 +1,8 @@
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import simpledialog, messagebox
 from tkinter.filedialog import askopenfilename, asksaveasfilename
 import pyperclip
-
+import re
 
 class FilterApp:
     def __init__(self, root):
@@ -33,21 +33,29 @@ class FilterApp:
         self.filters = {}
 
     def add_area(self):
-        area_input = tk.simpledialog.askstring("Input", "Enter Area (e.g., 08-11):")
+        area_input = simpledialog.askstring("Input", "Enter Area (e.g., A1, B1-C3):")
         if area_input:
             areas = self.parse_area_input(area_input)
             for area in areas:
                 self.add_area_internal(area)
         
     def parse_area_input(self, area_input):
-        # Parse the input and return a list of areas
         areas = []
         for part in area_input.split(','):
-            if '-' in part:
-                start, end = map(int, part.split('-'))
-                areas.extend(range(start, end + 1))
-            else:
-                areas.append(int(part))
+            part = part.strip()
+            if '-' in part:  # Handle range
+                start, end = part.split('-')
+                if start.isdigit() and end.isdigit():
+                    areas.extend(range(int(start), int(end) + 1))
+                else:
+                    start_prefix, start_number = re.match(r"([A-Za-z]*)([0-9]*)", start).groups()
+                    end_prefix, end_number = re.match(r"([A-Za-z]*)([0-9]*)", end).groups()
+                    if start_prefix == end_prefix:
+                        areas.extend([f"{start_prefix}{i}" for i in range(int(start_number), int(end_number) + 1)])
+                    else:
+                        areas.append(part)
+            else:  # Handle single area
+                areas.append(part.strip())
         return areas
 
     def add_area_internal(self, area):
@@ -58,7 +66,7 @@ class FilterApp:
         area_label.pack(side=tk.LEFT)
         
         area_entry = tk.Entry(area_frame)
-        area_entry.insert(0, f"{area:02d}")  # Format area as two-digit integer
+        area_entry.insert(0, area)
         area_entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
 
         add_sub_area_button = tk.Button(area_frame, text="Add Sub-area", command=lambda: self.add_sub_area(area_frame))
@@ -94,12 +102,17 @@ class FilterApp:
             with open(file_path, 'w') as file:
                 for area_frame, data in self.filters.items():
                     area = data["area_entry"].get().strip()
-                    sub_areas = [child.winfo_children()[0].get().strip() for child in data["sub_areas"]]
+                    sub_areas = [self.format_sub_area(child.winfo_children()[0].get().strip()) for child in data["sub_areas"]]
                     if area and sub_areas:
                         file.write(f"{area}:{','.join(sub_areas)}\n")
             messagebox.showinfo("Save Successful", "Filters saved successfully.")
         except Exception as e:
             messagebox.showerror("Save Error", f"An error occurred: {e}")
+
+    def format_sub_area(self, sub_area):
+        if sub_area == '*':
+            return '00-100'
+        return sub_area
 
     def load_filters(self):
         file_path = askopenfilename(filetypes=[("Text files", "*.txt")])
@@ -110,7 +123,7 @@ class FilterApp:
             with open(file_path, 'r') as file:
                 for line in file:
                     area, sub_areas = line.strip().split(':')
-                    area_frame = self.add_area_internal(int(area.strip()))
+                    area_frame = self.add_area_internal(area.strip())
                     for sub_area in sub_areas.split(','):
                         self.add_sub_area_internal(area_frame, sub_area.strip())
             messagebox.showinfo("Load Successful", "Filters loaded successfully.")
@@ -138,7 +151,7 @@ class FilterApp:
     def copy_sub_areas(self):
         sub_areas = []
         for data in self.filters.values():
-            sub_areas.extend([child.winfo_children()[0].get().strip() for child in data["sub_areas"]])
+            sub_areas.extend([self.format_sub_area(child.winfo_children()[0].get().strip()) for child in data["sub_areas"]])
         pyperclip.copy(",".join(sub_areas))
         messagebox.showinfo("Copy Successful", "Sub-areas copied to clipboard.")
 

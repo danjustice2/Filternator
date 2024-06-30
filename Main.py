@@ -109,14 +109,15 @@ class FilterApp:
             return 
 
         try:
-            filters_to_save = {}
-            for area_frame, data in self.filters.items():
-                area = data["area_entry"].get().strip()
-                sub_areas = [self.format_sub_area(child.winfo_children()[0].get().strip()) for child in data["sub_areas"]]
+            data = {}
+            for area_frame, data_entry in self.filters.items():
+                area = data_entry["area_entry"].get().strip()
+                sub_areas = [self.format_sub_area(child.winfo_children()[0].get().strip()) for child in data_entry["sub_areas"]]
                 if area and sub_areas:
-                    filters_to_save[area] = sub_areas
+                    data[area] = sub_areas
+
             with open(file_path, 'w') as file:
-                json.dump(filters_to_save, file, indent=4)
+                json.dump(data, file, indent=4)
             messagebox.showinfo("Save Successful", "Filters saved successfully.")
         except Exception as e:
             messagebox.showerror("Save Error", f"An error occurred: {e}")
@@ -136,11 +137,11 @@ class FilterApp:
 
         try:
             with open(file_path, 'r') as file:
-                filters_loaded = json.load(file)
-                for area, sub_areas in filters_loaded.items():
-                    area_frame = self.add_area_internal(area)
+                data = json.load(file)
+                for area, sub_areas in data.items():
+                    area_frame = self.add_area_internal(area.strip())
                     for sub_area in sub_areas:
-                        self.add_sub_area_internal(area_frame, sub_area)
+                        self.add_sub_area_internal(area_frame, sub_area.strip())
             messagebox.showinfo("Load Successful", "Filters loaded successfully.")
         except Exception as e:
             messagebox.showerror("Load Error", f"An error occurred: {e}")
@@ -176,7 +177,6 @@ class FilterApp:
             sub_areas.extend([self.format_sub_area(child.winfo_children()[0].get().strip()) for child in data["sub_areas"]])
         pyperclip.copy(",".join(sub_areas))
         messagebox.showinfo("Copy Successful", "Sub-areas copied to clipboard.")
-
 
 
 if __name__ == "__main__":

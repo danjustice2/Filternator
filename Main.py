@@ -1,3 +1,4 @@
+
 import tkinter as tk
 from tkinter import simpledialog, messagebox
 from tkinter.filedialog import askopenfilename, asksaveasfilename
@@ -113,8 +114,8 @@ class FilterApp:
             for area_frame, data_entry in self.filters.items():
                 area = data_entry["area_entry"].get().strip()
                 sub_areas = [self.format_sub_area(child.winfo_children()[0].get().strip()) for child in data_entry["sub_areas"]]
-                if area and sub_areas:
-                    data[area] = sub_areas
+                sub_areas = sub_areas if sub_areas else ['*']
+                data[area] = sub_areas
 
             with open(file_path, 'w') as file:
                 json.dump(data, file, indent=4)
@@ -140,8 +141,11 @@ class FilterApp:
                 data = json.load(file)
                 for area, sub_areas in data.items():
                     area_frame = self.add_area_internal(area.strip())
-                    for sub_area in sub_areas:
-                        self.add_sub_area_internal(area_frame, sub_area.strip())
+                    if isinstance(sub_areas, list):
+                        for sub_area in sub_areas:
+                            self.add_sub_area_internal(area_frame, sub_area.strip())
+                    else:
+                        self.add_sub_area_internal(area_frame, self.format_sub_area(sub_areas.strip()))
             messagebox.showinfo("Load Successful", "Filters loaded successfully.")
         except Exception as e:
             messagebox.showerror("Load Error", f"An error occurred: {e}")
@@ -167,18 +171,27 @@ class FilterApp:
         self.filters[area_frame]["sub_areas"].append(sub_area_frame)
 
     def copy_areas(self):
-        areas = ",".join([data["area_entry"].get().strip() for data in self.filters.values()])
-        pyperclip.copy(areas)
-        messagebox.showinfo("Copy Successful", "Areas copied to clipboard.")
-
-    def copy_sub_areas(self):
+        areas = []
         sub_areas = []
         for data in self.filters.values():
-            sub_areas.extend([self.format_sub_area(child.winfo_children()[0].get().strip()) for child in data["sub_areas"]])
-        pyperclip.copy(",".join(sub_areas))
-        messagebox.showinfo("Copy Successful", "Sub-areas copied to clipboard.")
+            area = data["area_entry"].get().strip()
+            if not data["sub_areas"]:
+                areas.append(area)
+                sub_areas.append(self.format_sub_area('*'))
+            for sub_area_frame in data["sub_areas"]:
+                sub_area = self.format_sub_area(sub_area_frame.winfo_children()[0].get().strip())
+                areas.append(area)
+                sub_areas.append(sub_area)
 
+        areas_string = ",".join(areas)
+        sub_areas_string = ",".join(sub_areas)
 
+        pyperclip.copy(areas_string)
+        messagebox.showinfo("Copy Areas Successful", "Areas copied to clipboard.")
+
+        pyperclip.copy(sub_areas_string)
+        messagebox.showinfo("Copy Sub-areas Successful", "Sub-areas copied to clipboard.")
+    
 if __name__ == "__main__":
     root = tk.Tk()
     app = FilterApp(root)

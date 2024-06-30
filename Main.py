@@ -1,3 +1,4 @@
+
 import tkinter as tk
 from tkinter import simpledialog, messagebox
 from tkinter.filedialog import askopenfilename, asksaveasfilename
@@ -72,6 +73,9 @@ class FilterApp:
         add_sub_area_button = tk.Button(area_frame, text="Add Sub-area", command=lambda: self.add_sub_area(area_frame))
         add_sub_area_button.pack(side=tk.RIGHT)
 
+        delete_area_button = tk.Button(area_frame, text="Delete Area", command=lambda: self.delete_area(area_frame))
+        delete_area_button.pack(side=tk.RIGHT)
+
         sub_areas_frame = tk.Frame(area_frame)
         sub_areas_frame.pack(fill=tk.X)
 
@@ -92,6 +96,12 @@ class FilterApp:
     def remove_sub_area(self, area_frame, sub_area_frame):
         sub_area_frame.destroy()
         self.filters[area_frame]["sub_areas"].remove(sub_area_frame)
+
+    def delete_area(self, area_frame):
+        for sub_area_frame in self.filters[area_frame]["sub_areas"]:
+            sub_area_frame.destroy()
+        area_frame.destroy()
+        del self.filters[area_frame]
 
     def save_filters(self):
         file_path = asksaveasfilename(defaultextension=".txt", filetypes=[("Text files", "*.txt")])
@@ -115,6 +125,9 @@ class FilterApp:
         return sub_area
 
     def load_filters(self):
+        if self.filters and messagebox.askokcancel("Load Filters", "Loading a new file will clear all unsaved changes. Continue?"):
+            self.clear_filters()
+
         file_path = askopenfilename(filetypes=[("Text files", "*.txt")])
         if not file_path:
             return
@@ -129,6 +142,13 @@ class FilterApp:
             messagebox.showinfo("Load Successful", "Filters loaded successfully.")
         except Exception as e:
             messagebox.showerror("Load Error", f"An error occurred: {e}")
+
+    def clear_filters(self):
+        for area_frame, data in self.filters.items():
+            for sub_area_frame in data["sub_areas"]:
+                sub_area_frame.destroy()
+            area_frame.destroy()
+        self.filters.clear()
 
     def add_sub_area_internal(self, area_frame, sub_area):
         sub_area_frame = tk.Frame(self.filters[area_frame]["sub_areas_frame"])
